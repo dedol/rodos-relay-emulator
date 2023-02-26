@@ -1,0 +1,12 @@
+version: '3.9'
+
+services:
+  relay-emulator:
+    image: ghcr.io/dedol/rodos-relay-emulator:1.0.0
+    container_name: relay-emulator
+    ports:
+      - '28081:80'
+    environment:
+      AUTH_USERNAME: 'admin'
+      AUTH_PASSWORD: 'admin'
+      IMPULSE_TIMER_SEC: 10
