@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RODOS Relay Emulator</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+
+  <div class="container">
+    <div class="row my-4">
+      <div class="col">
+        <h3 class="text-center">Relay channels status</h3>
+        <table class="table table-bordered table-hover text-center">
+          <thead>
+            <tr>
+              <th scope="col">Relay</th>
+              <th scope="col">State</th>
+              <th scope="col">Timer</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Relay 0</td>
+              <td><span id="relay-0-state">unknown</span></td>
+              <td><span id="relay-0-timer">unknown</span></td>
+            </tr>
+            <tr>
+              <td>Relay 1</td>
+              <td><span id="relay-1-state">unknown</span></td>
+              <td><span id="relay-1-timer">unknown</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="col">
+        <h3 class="text-center">Traffic light emulator</h3>
+        <div class="traffic">
+          <div class="light red"></div>
+          <div class="light green"></div>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col">
+        <h3>Logs output</h3>
+        <textarea class="form-control" id="logs" rows="10">--- RODOS Relay Emulator ---</textarea>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.6.0/dist/socket.io.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    let socket = io();
+    let timers = [null, null];
+    let colors = {0: 'red', 1: 'green'};
+    let logs = document.getElementById('logs');
+
+    socket.on('update', response => {      
+      let id = response.id;
+      let state = response.state;
+      let timer = response.timer;
+
+      // Формирование даты для вывода лога
+      let now = new Date();
+      let d = ('0' + now.getDate()).slice(-2);
+      let m = ('0' + (now.getMonth() + 1)).slice(-2);
+      let y = now.getFullYear();
+      let hrs = ('0' + now.getHours()).slice(-2);
+      let min = ('0' + now.getMinutes()).slice(-2);
+      let sec = ('0' + now.getSeconds()).slice(-2);
+      let msc = ('00' + now.getMilliseconds()).slice(-3);
+      let date = `[${d}.${m}.${y} ${hrs}:${min}:${sec}.${msc}]`
+
+      // Вывод лога
+      logs.value += '\n' + `${date} Relay ${id} change state to ${state}`;
+      logs.value += timer ? ` with timer up to ${timer}` : '';
+      logs.scrollTop = logs.scrollHeight;
+
+      // Обновление состояния
+      timers[id] = timer;
+      document.querySelector(`#relay-${id}-state`).innerHTML = state;
+
+      // Логика для включения светофора
+      if (state == 'ON') {
+        document.querySelector(`.${colors[id]}`).classList.add('active');
+      } 
+      if (state == 'OFF') {
+        document.querySelector(`.${colors[id]}`).classList.remove('active');
+      }
+    });
+
+    // Запрос текущего состояния при загрузке страницы
+    socket.emit('states', '');
+
+    // Обновление таймеров каждые 200 мс
+    setInterval(() => {
+      let now = new Date().getTime()
+      timers.forEach((timer, index) => {
+        let elem = document.querySelector(`#relay-${index}-timer`);
+        elem.innerHTML = timer ? parseInt((timer - now) / 1000) : 'Not set';
+      })
+    }, 200)
+  </script>
+
+  <style>
+    .traffic {
+      background:#333;
+	    width: 150px;
+	    height: 280px;
+      border-radius: 20px;
+      border: 5px solid #000;
+      margin: 0px auto;
+    }
+
+    .light {
+      transition: background 500ms ease-out;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      margin: 10px auto;
+      line-height: 120px;
+      background-color: #666;
+      border: 5px solid #000;
+    }
+
+    .red.active {
+      background-color: red;
+    }
+
+    .green.active {
+      background-color: rgb(0, 220, 0);
+    }
+
+    textarea {
+      font-family: monospace;
+    }
+  </style>  
+</body>
+</html>
